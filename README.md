@@ -63,10 +63,6 @@ The system responds to incoming character strings structured as follows:
 * **Dr.** Ragab Qasem
 * **Mr.** Mostafa Fathy
 
-### Engineering Development Team
-Amr Elsayed · Mohamed Essam · Amr Ibrahim · Ahmed Samy · Omar Ahmed · Ahmed Wasiefie · Ahmed Hashad · Aly Mansour
-
----
 
 ## 🛠️ Installation & Dependencies
 
