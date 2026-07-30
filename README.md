@@ -1,5 +1,19 @@
+# 🧪 SystemUnite4
+### Automated Bioreactor & Incubation Controller
 
-# 🧪 SystemUnite4: Automated Bioreactor 
+<p align="center">
+  <img src="docs/SystemUnite4_Architecture.png" width="1000">
+</p>
+
+---
+
+## Overview
+
+SystemUnite4 is an embedded master controller engineered to automate microbial incubation and bioprocess regulation using dual temperature monitoring, heating control, aeration management, Bluetooth telemetry, and an LCD user interface.
+
+## Features
+
+
 
 [![Platform](https://img.shields.io/badge/Platform-Arduino%20Mega-blue.svg)](https://www.arduino.cc/)
 [![Language](https://img.shields.io/badge/Language-C%2B%2B-green.svg)](https://isocpp.org/)
