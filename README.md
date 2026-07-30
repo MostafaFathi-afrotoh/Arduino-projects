@@ -2,7 +2,7 @@
 ### Automated Bioreactor & Incubation Controller
 
 <p align="center">
-  <img src="docs/SystemUnite4_Architecture.png" width="1000">
+  <img src="docs/file_0000000029c08210a46aa0e242456f31.png" width="1000">
 </p>
 
 ---
