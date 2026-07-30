@@ -32,5 +32,6 @@ I specialize in the intersection of **Cellular Biophysics, Bioelectronics, and E
 
 ### 📬 Connect with Me
 - **Location:** Alexandria, Egypt
-- **Email:** [Your Professional Email]
-- **LinkedIn:** [Your LinkedIn Profile]
+- **Email:** [Afracosh12@gmail.com]
+- **LinkedIn:** [https://www.linkedin.com/in/mostafa-fthe-abd-altwab-438b09305?utm_source=share_via&utm_content=profile&utm_medium=member_android]
+- 
