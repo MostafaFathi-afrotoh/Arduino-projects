@@ -1,0 +1,559 @@
+import sys
+import threading
+import time
+
+from kivy.lang import Builder
+from kivy.clock import Clock
+from kivy.graphics import Color, Line
+from kivy.properties import NumericProperty, StringProperty, BooleanProperty
+
+from kivymd.app import MDApp
+from kivymd.uix.button import MDRaisedButton, MDFlatButton
+from kivymd.uix.card import MDCard
+from kivymd.uix.dialog import MDDialog
+
+# استدعاء مكتبة PyJNIus للتعامل مع أندرويد native bluetooth
+try:
+    from jnius import autoclass
+    BluetoothAdapter = autoclass('android.bluetooth.BluetoothAdapter')
+    BluetoothDevice = autoclass('android.bluetooth.BluetoothDevice')
+    BluetoothSocket = autoclass('android.bluetooth.BluetoothSocket')
+    UUID = autoclass('java.util.UUID')
+    ANDROID_BT_AVAILABLE = True
+except Exception as e:
+    ANDROID_BT_AVAILABLE = False
+    print(f"Bluetooth Native API Error: {e}")
+
+UUID_SPP = "00001101-0000-1000-8000-00805F9B34FB"
+
+KV = '''
+<TemperatureGauge>:
+    orientation: 'vertical'
+    padding: "12dp"
+    spacing: "8dp"
+    md_bg_color: [0.08, 0.12, 0.20, 1]
+    radius: [14,]
+    line_color: [0.11, 0.22, 0.37, 1]
+    line_width: 1
+
+    MDLabel:
+        text: root.label
+        font_style: "Button"
+        theme_text_color: "Custom"
+        text_color: [0.41, 0.56, 0.65, 1]
+        halign: "center"
+        size_hint_y: None
+        height: "20dp"
+
+    Widget:
+        id: gauge_widget
+        size_hint: None, None
+        size: "90dp", "90dp"
+        pos_hint: {"center_x": 0.5}
+        on_size: root.draw_gauge()
+        on_pos: root.draw_gauge()
+
+        MDLabel:
+            text: f"{root.value:.1f}°C" if root.value >= 0 else "--"
+            font_style: "H6"
+            bold: True
+            halign: "center"
+            valign: "center"
+            pos: gauge_widget.pos
+            size: gauge_widget.size
+            theme_text_color: "Custom"
+            text_color: root.status_color
+
+    MDLabel:
+        text: root.status_text
+        font_style: "Caption"
+        theme_text_color: "Custom"
+        text_color: [0.41, 0.56, 0.65, 1]
+        halign: "center"
+        size_hint_y: None
+        height: "16dp"
+
+
+MDFloatLayout:
+    md_bg_color: [0.03, 0.08, 0.15, 1]
+
+    MDBoxLayout:
+        orientation: 'vertical'
+
+        # Header
+        MDBoxLayout:
+            size_hint_y: None
+            height: "64dp"
+            padding: ["16dp", "0dp"]
+            md_bg_color: [0.08, 0.12, 0.20, 1]
+            spacing: "12dp"
+
+            MDLabel:
+                text: "🧬"
+                font_style: "H5"
+                size_hint_x: None
+                width: "32dp"
+                pos_hint: {"center_y": 0.5}
+
+            MDBoxLayout:
+                orientation: 'vertical'
+                alignment: "left"
+                pos_hint: {"center_y": 0.5}
+                size_hint_y: None
+                height: "40dp"
+
+                MDLabel:
+                    text: "Bioreactor Control"
+                    font_style: "Subtitle1"
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: [0.91, 0.95, 0.97, 1]
+
+                MDLabel:
+                    text: "SystemUnite Master Link"
+                    font_style: "Caption"
+                    theme_text_color: "Custom"
+                    text_color: [0.41, 0.56, 0.65, 1]
+
+            MDLabel:
+                text: "LIVE" if app.is_connected else ("SCAN" if app.is_connecting else "OFF")
+                font_style: "Button"
+                halign: "right"
+                pos_hint: {"center_y": 0.5}
+                theme_text_color: "Custom"
+                text_color: [0.18, 0.83, 0.45, 1] if app.is_connected else ([1, 0.64, 0.0, 1] if app.is_connecting else [1, 0.27, 0.34, 1])
+
+        ScrollView:
+            do_scroll_x: False
+            
+            MDBoxLayout:
+                orientation: 'vertical'
+                padding: "16dp"
+                spacing: "16dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+                # Connection Status Card
+                MDCard:
+                    orientation: 'vertical'
+                    padding: "16dp"
+                    spacing: "10dp"
+                    size_hint_y: None
+                    height: "140dp"
+                    md_bg_color: [0.08, 0.12, 0.20, 1]
+                    radius: [14,]
+
+                    MDLabel:
+                        text: "HARDWARE STATUS"
+                        font_style: "Button"
+                        theme_text_color: "Custom"
+                        text_color: [0.41, 0.56, 0.65, 1]
+
+                    MDLabel:
+                        text: app.status_msg
+                        font_style: "Body2"
+                        theme_text_color: "Custom"
+                        text_color: [0.91, 0.95, 0.97, 1]
+
+                    MDRaisedButton:
+                        text: "Disconnect" if app.is_connected else ("Connecting..." if app.is_connecting else "Connect HC-05")
+                        md_bg_color: [1, 0.27, 0.34, 1] if app.is_connected else [0.18, 0.52, 0.67, 1]
+                        on_release: app.toggle_connection()
+
+                # Sensors Gauges
+                MDLabel:
+                    text: "LIVE DALLAS DS18B20 READINGS"
+                    font_style: "Button"
+                    theme_text_color: "Custom"
+                    text_color: [0.41, 0.56, 0.65, 1]
+                    size_hint_y: None
+                    height: "20dp"
+
+                MDBoxLayout:
+                    orientation: 'horizontal'
+                    spacing: "12dp"
+                    size_hint_y: None
+                    height: "170dp"
+
+                    TemperatureGauge:
+                        id: gauge1
+                        label: "UPPER TEMP (T1)"
+                        value: app.t1_val
+
+                    TemperatureGauge:
+                        id: gauge2
+                        label: "BOTTOM TEMP (T2)"
+                        value: app.t2_val
+
+                # Control Parameters Section
+                MDLabel:
+                    text: "CONTROL PARAMETERS"
+                    font_style: "Button"
+                    theme_text_color: "Custom"
+                    text_color: [0.41, 0.56, 0.65, 1]
+                    size_hint_y: None
+                    height: "20dp"
+
+                MDCard:
+                    orientation: 'vertical'
+                    padding: "16dp"
+                    spacing: "12dp"
+                    size_hint_y: None
+                    height: "180dp"
+                    md_bg_color: [0.08, 0.12, 0.20, 1]
+                    radius: [14,]
+
+                    MDBoxLayout:
+                        spacing: "12dp"
+                        
+                        MDTextField:
+                            id: target_temp_input
+                            hint_text: "DESIRED TEMP (°C)"
+                            input_filter: "int"
+                            mode: "rectangle"
+                            font_size: "13sp"
+                            text_color_normal: [0.91, 0.95, 0.97, 1]
+                            hint_text_color_normal: [0.41, 0.56, 0.65, 1]
+
+                        MDTextField:
+                            id: op_time_input
+                            hint_text: "TIMER (SECONDS)"
+                            input_filter: "int"
+                            mode: "rectangle"
+                            font_size: "13sp"
+                            text_color_normal: [0.91, 0.95, 0.97, 1]
+                            hint_text_color_normal: [0.41, 0.56, 0.65, 1]
+
+                    MDRaisedButton:
+                        text: "Transmit to Controller"
+                        icon: "send"
+                        disabled: not app.is_connected
+                        md_bg_color: [0.0, 0.9, 0.63, 1]
+                        text_color: [0.03, 0.08, 0.15, 1]
+                        pos_hint: {"center_x": 0.5}
+                        on_release: app.send_parameters()
+
+                # Air Pump Control Section
+                MDLabel:
+                    text: "AIR PUMPS CONTROL"
+                    font_style: "Button"
+                    theme_text_color: "Custom"
+                    text_color: [0.41, 0.56, 0.65, 1]
+                    size_hint_y: None
+                    height: "20dp"
+
+                MDBoxLayout:
+                    spacing: "12dp"
+                    size_hint_y: None
+                    height: "90dp"
+
+                    MDCard:
+                        padding: "12dp"
+                        radius: [14,]
+                        ripple_behavior: True
+                        disabled: not app.is_connected
+                        md_bg_color: [0.18, 0.83, 0.45, 0.15] if app.air1_on else [0.08, 0.12, 0.20, 1]
+                        line_color: [0.18, 0.83, 0.45, 1] if app.air1_on else [0.11, 0.22, 0.37, 1]
+                        on_release: app.toggle_air1()
+
+                        MDBoxLayout:
+                            orientation: 'vertical'
+                            MDLabel:
+                                text: "AIR PUMP 1"
+                                font_style: "Caption"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: [0.18, 0.83, 0.45, 1] if app.air1_on else [0.41, 0.56, 0.65, 1]
+                            MDLabel:
+                                text: "ON" if app.air1_on else "OFF"
+                                font_style: "H5"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: [0.18, 0.83, 0.45, 1] if app.air1_on else [0.41, 0.56, 0.65, 1]
+
+                    MDCard:
+                        padding: "12dp"
+                        radius: [14,]
+                        ripple_behavior: True
+                        disabled: not app.is_connected
+                        md_bg_color: [0.18, 0.83, 0.45, 0.15] if app.air2_on else [0.08, 0.12, 0.20, 1]
+                        line_color: [0.18, 0.83, 0.45, 1] if app.air2_on else [0.11, 0.22, 0.37, 1]
+                        on_release: app.toggle_air2()
+
+                        MDBoxLayout:
+                            orientation: 'vertical'
+                            MDLabel:
+                                text: "AIR PUMP 2"
+                                font_style: "Caption"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: [0.18, 0.83, 0.45, 1] if app.air2_on else [0.41, 0.56, 0.65, 1]
+                            MDLabel:
+                                text: "ON" if app.air2_on else "OFF"
+                                font_style: "H5"
+                                bold: True
+                                theme_text_color: "Custom"
+                                text_color: [0.18, 0.83, 0.45, 1] if app.air2_on else [0.41, 0.56, 0.65, 1]
+
+                # Run Control Section
+                MDLabel:
+                    text: "PROCESS EXECUTION"
+                    font_style: "Button"
+                    theme_text_color: "Custom"
+                    text_color: [0.41, 0.56, 0.65, 1]
+                    size_hint_y: None
+                    height: "20dp"
+
+                MDBoxLayout:
+                    spacing: "12dp"
+                    size_hint_y: None
+                    height: "60dp"
+
+                    MDRaisedButton:
+                        text: "START PROCESS"
+                        icon: "play"
+                        size_hint_x: 0.5
+                        size_hint_y: 1
+                        disabled: not app.is_connected or app.is_running
+                        md_bg_color: [0.18, 0.83, 0.45, 1]
+                        on_release: app.start_run()
+
+                    MDRaisedButton:
+                        text: "STOP PROCESS"
+                        icon: "stop"
+                        size_hint_x: 0.5
+                        size_hint_y: 1
+                        disabled: not app.is_connected or not app.is_running
+                        md_bg_color: [1, 0.27, 0.34, 1]
+                        on_release: app.stop_run()
+'''
+
+class TemperatureGauge(MDCard):
+    value = NumericProperty(-1.0)
+    label = StringProperty("SENSOR")
+    status_text = StringProperty("Offline")
+    status_color = [0.41, 0.56, 0.65, 1]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.bind(value=self.on_value_change)
+
+    def on_value_change(self, instance, val):
+        if val < 0:
+            self.status_text = "Offline"
+            self.status_color = [0.41, 0.56, 0.65, 1]
+        elif val < 30:
+            self.status_text = "Cold"
+            self.status_color = [0.13, 0.59, 0.95, 1]
+        elif val < 50:
+            self.status_text = "Optimal"
+            self.status_color = [0.0, 0.9, 0.63, 1]
+        elif val < 70:
+            self.status_text = "Warm"
+            self.status_color = [1, 0.65, 0.01, 1]
+        else:
+            self.status_text = "Hot"
+            self.status_color = [1, 0.27, 0.34, 1]
+
+        self.draw_gauge()
+
+    def draw_gauge(self):
+        widget = self.ids.gauge_widget
+        widget.canvas.before.clear()
+
+        w, h = widget.size
+        cx, cy = widget.center_x, widget.center_y
+        radius = min(w, h) / 2 - 10
+
+        with widget.canvas.before:
+            Color(0.11, 0.22, 0.37, 1)
+            Line(circle=(cx, cy, radius, 0, 360), width=4)
+
+            if self.value >= 0:
+                pct = min(max(self.value / 100.0, 0.0), 1.0)
+                angle_end = pct * 360
+                Color(*self.status_color)
+                Line(circle=(cx, cy, radius, 0, angle_end), width=4)
+
+
+class BioreactorApp(MDApp):
+    is_connected = BooleanProperty(False)
+    is_connecting = BooleanProperty(False)
+    is_running = BooleanProperty(False)
+
+    t1_val = NumericProperty(-1.0)
+    t2_val = NumericProperty(-1.0)
+
+    air1_on = BooleanProperty(False)
+    air2_on = BooleanProperty(False)
+
+    status_msg = StringProperty("Disconnected — Tap Connect")
+
+    bt_socket = None
+    input_stream = None
+    output_stream = None
+    rx_thread = None
+    stop_rx = False
+
+    def build(self):
+        self.theme_cls.theme_style = "Dark"
+        self.theme_cls.primary_palette = "Blue"
+        return Builder.load_string(KV)
+
+    def toggle_connection(self):
+        if self.is_connected:
+            self.disconnect_bt()
+        else:
+            self.connect_bt()
+
+    def connect_bt(self):
+        if not ANDROID_BT_AVAILABLE:
+            self.status_msg = "Error: Android Bluetooth API not available"
+            return
+
+        self.is_connecting = True
+        self.status_msg = "Connecting to HC-05 Module..."
+        threading.Thread(target=self._connect_thread, daemon=True).start()
+
+    def _connect_thread(self):
+        try:
+            adapter = BluetoothAdapter.getDefaultAdapter()
+            if not adapter or not adapter.isEnabled():
+                Clock.schedule_once(lambda dt: self._on_connect_fail("Enable Bluetooth on Mobile!"), 0)
+                return
+
+            paired_devices = adapter.getBondedDevices().toArray()
+            hc05_device = None
+
+            for dev in paired_devices:
+                name = dev.getName()
+                if name and ("HC-05" in name or "HC-06" in name or "SystemUnite" in name):
+                    hc05_device = dev
+                    break
+
+            if not hc05_device:
+                Clock.schedule_once(lambda dt: self._on_connect_fail("HC-05 not found! Pair it in phone Bluetooth Settings."), 0)
+                return
+
+            uuid = UUID.fromString(UUID_SPP)
+            self.bt_socket = hc05_device.createRfcommSocketToServiceRecord(uuid)
+            adapter.cancelDiscovery()
+            self.bt_socket.connect()
+
+            self.input_stream = self.bt_socket.getInputStream()
+            self.output_stream = self.bt_socket.getOutputStream()
+
+            self.stop_rx = False
+            self.rx_thread = threading.Thread(target=self._listen_data, daemon=True)
+            self.rx_thread.start()
+
+            Clock.schedule_once(lambda dt: self._on_connect_success(hc05_device.getName()), 0)
+
+        except Exception as e:
+            Clock.schedule_once(lambda dt: self._on_connect_fail("Connection Failed! Retry."), 0)
+
+    def _on_connect_success(self, dev_name):
+        self.is_connecting = False
+        self.is_connected = True
+        self.status_msg = f"Connected: {dev_name}"
+
+    def _on_connect_fail(self, error):
+        self.is_connecting = False
+        self.is_connected = False
+        self.status_msg = error
+
+    def send_bt_data(self, data_str):
+        if self.is_connected and self.output_stream:
+            try:
+                self.output_stream.write(bytes(data_str + "\n", 'utf-8'))
+                self.output_stream.flush()
+            except Exception as e:
+                self.status_msg = f"Send Error: {e}"
+
+    def _listen_data(self):
+        buffer = ""
+        while not self.stop_rx and self.is_connected:
+            try:
+                if self.input_stream.available() > 0:
+                    b = self.input_stream.read()
+                    char = chr(b)
+                    if char == '\n':
+                        self._parse_incoming_data(buffer.strip())
+                        buffer = ""
+                    else:
+                        buffer += char
+                else:
+                    time.sleep(0.05)
+            except Exception:
+                break
+
+    def _parse_incoming_data(self, raw_line):
+        try:
+            if raw_line.startswith("T1:"):
+                val = float(raw_line.replace("T1:", "").strip())
+                Clock.schedule_once(lambda dt, v=val: setattr(self, 't1_val', v), 0)
+            elif raw_line.startswith("T2:"):
+                val = float(raw_line.replace("T2:", "").strip())
+                Clock.schedule_once(lambda dt, v=val: setattr(self, 't2_val', v), 0)
+        except Exception:
+            pass
+
+    def disconnect_bt(self):
+        self.stop_rx = True
+        try:
+            if self.bt_socket:
+                self.bt_socket.close()
+        except Exception:
+            pass
+
+        self.is_connected = False
+        self.is_running = False
+        self.air1_on = False
+        self.air2_on = False
+        self.t1_val = -1.0
+        self.t2_val = -1.0
+        self.status_msg = "Disconnected"
+
+    # أزرار الإرسال المطابقة لكود الأردوينو
+    def send_parameters(self):
+        target_temp = self.root.ids.target_temp_input.text
+        op_time = self.root.ids.op_time_input.text
+
+        if target_temp:
+            self.send_bt_data(f"TEMP:{target_temp}")
+            time.sleep(0.1)
+        if op_time:
+            self.send_bt_data(f"TIME:{op_time}")
+
+        self.show_dialog("Parameters Sent", f"Transmitted to Arduino:\nTEMP:{target_temp}\nTIME:{op_time}")
+
+    def toggle_air1(self):
+        self.air1_on = not self.air1_on
+        cmd = "AIR1:ON" if self.air1_on else "AIR1:OFF"
+        self.send_bt_data(cmd)
+
+    def toggle_air2(self):
+        self.air2_on = not self.air2_on
+        cmd = "AIR2:ON" if self.air2_on else "AIR2:OFF"
+        self.send_bt_data(cmd)
+
+    def start_run(self):
+        self.is_running = True
+        self.status_msg = "Bioreactor Process Running..."
+        self.send_bt_data("START")
+
+    def stop_run(self):
+        self.is_running = False
+        self.status_msg = "Process Stopped."
+        self.send_bt_data("STOP")
+
+    def show_dialog(self, title, text):
+        dialog = MDDialog(
+            title=title,
+            text=text,
+            buttons=[MDFlatButton(text="OK", on_release=lambda x: dialog.dismiss())]
+        )
+        dialog.open()
+
+if __name__ == '__main__':
+    BioreactorApp().run()
