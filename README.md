@@ -1,6 +1,45 @@
 
 # 🧪 SystemUnite4: Automated Bioreactor & Incubation Controller
 
+                              SystemUnite4
+             Automated Bioreactor & Incubation Controller
+
+                         ┌────────────────────┐
+                         │ Android Application│
+                         │ Bluetooth Terminal │
+                         └─────────┬──────────┘
+                                   │
+                          HC-05 Bluetooth UART
+                                   │
+                      RX1 / TX1 (Serial1 - 9600 bps)
+                                   │
+                                   ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                     Arduino Mega 2560 Controller                   │
+│                                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │                    Control Firmware                          │  │
+│  │                                                              │  │
+│  │ • Bluetooth Command Parser                                   │  │
+│  │ • Temperature Acquisition                                    │  │
+│  │ • Closed-Loop Heater Control                                 │  │
+│  │ • Aeration Management                                        │  │
+│  │ • Countdown Timer                                            │  │
+│  │ • LCD Interface                                               │ │
+│  └──────────────────────────────────────────────────────────────┘  │
+│                                                                    │
+│  Sensors                Outputs                  User Interface     │
+│                                                                    │
+│  DS18B20 #1 ───────► Upper Heater Relay ─────► Heating Element #1   │
+│  DS18B20 #2 ───────► Lower Heater Relay ─────► Heating Element #2   │
+│                                                                    │
+│                     Air Relay #1 ────────────► Air Pump #1          │
+│                     Air Relay #2 ────────────► Air Pump #2          │
+│                                                                    │
+│                     LCD I2C (16×2)                                 │
+│                     Status LEDs                                    │
+└────────────────────────────────────────────────────────────────────┘
+
 [![Platform](https://img.shields.io/badge/Platform-Arduino%20Mega-blue.svg)](https://www.arduino.cc/)
 [![Language](https://img.shields.io/badge/Language-C%2B%2B-green.svg)](https://isocpp.org/)
 [![Communication](https://img.shields.io/badge/Protocol-Bluetooth%20%7C%20I2C%20%7C%20OneWire-orange.svg)]()
