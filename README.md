@@ -28,7 +28,7 @@ SystemUnite4 is an embedded master controller engineered to automate microbial i
 The core firmware maintains closed-loop thermal regulation and timed gas injection for biological growth chambers (such as microbial incubators or bioreactors).
 
 ### Key Features
-* **Dual-Zone Thermal Monitoring:** Interfaced with DS18B20 digital temperature sensors over Dallas OneWire protocol for high accuracy ($T_1$ and $T_2$).
+* **Dual-Zone Thermal Monitoring:** Interfaced with DS18B20 digital temperature sensors over Dallas OneWire protocol for high accuracy (T_1 and T_2).
 * **Closed-Loop Actuation:** Dynamic switching for upper and bottom heating elements based on real-time temperature feedback against user-defined targets.
 * **Dual Aeration System:** Multi-channel air generator control (`AIR1` / `AIR2`) to support aerobic fermentation or oxygenation cycles.
 * **Wireless Telemetry (UART/Bluetooth):** Remote control interface (`Serial1`) receiving real-time commands (`START`, `STOP`, `TEMP`, `TIME`, `AIR`) and transmitting live diagnostics.
