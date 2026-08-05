@@ -74,9 +74,13 @@ The system responds to incoming character strings structured as follows:
 
 ### Academic Supervision
 * **Prof. Dr.** Salah Badr
-* **Dr.** Ragab Qasem
+* **Dr.** Ragab Qasem💻
 * **Mr.** Mostafa Fathy
-
+* Note:
+  Dr. Ragab Qasem is the main supervisor responsible for all scientific and 
+     engineering aspects of the project.
+ Prof. Dr. Salah Badr provided on-site facility 
+     support.
 
 ## 🛠️ Installation & Dependencies
 
