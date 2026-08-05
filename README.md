@@ -70,17 +70,26 @@ The system responds to incoming character strings structured as follows:
 
 ---
 
-## 👥 Academic & Engineering Credits
+👥 Academic & Engineering Credits
 
-### Academic Supervision
-* **Prof. Dr.** Salah Badr
-* **Dr.** Ragab Qasem💻
-* **Mr.** Mostafa Fathy
-* Note:
-  Dr. Ragab Qasem is the main supervisor responsible for all scientific and 
-     engineering aspects of the project.
-  Prof. Dr. Salah Badr provided on-site facility 
-     support.
+Project Leadership & Supervision
+* Prof. Dr. Salah Badr  
+  *Principal Supervisor, Laboratory Host & Primary Sponsor*
+* Dr. Ragab Qasem  
+  *Main Co-Supervisor (Scientific & Engineering Lead)*
+* Dr. Omar  
+  *Co-Supervisor & Academic Mentor*
+* Mr. Mostafa Fathy  
+  *Lead Embedded Developer & Project Creator*
+
+> **Note:** Dr. Ragab Qasem is the main supervisor responsible for all scientific and engineering aspects of the project.
+
+---
+
+🙏 Acknowledgments & Special Thanks
+
+* **Prof. Dr. Salah Badr:** Deepest gratitude to Prof. Dr. Salah Badr for his direct supervision, funding the project, providing full access to his specialized research laboratory, and empowering the execution of this work.
+* **Dr. Omar:** Special appreciation to Dr. Omar. His insightful advice and guidance were the primary catalyst for initiating this project, and his continuous motivation served as the key driving force to bring it to completion.
 
 ## 🛠️ Installation & Dependencies
 
