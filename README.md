@@ -89,6 +89,7 @@ Project Leadership & Supervision
 🙏 Acknowledgments & Special Thanks
 
 * **Prof. Dr. Salah Badr:** Deepest gratitude to Prof. Dr. Salah Badr for his direct supervision, funding the project, providing full access to his specialized research laboratory, and empowering the execution of this work.
+* **Dr. Ragab Qasem:** Sincere appreciation and profound gratitude to Dr. Ragab Qasem for his hands-on technical guidance, invaluable expertise, and immense dedication throughout every stage of this project. His constant patience, problem-solving support, and scientific mentorship were foundational to making this implementation successful.
 * **Dr. Omar:** Special appreciation to Dr. Omar. His insightful advice and guidance were the primary catalyst for initiating this project, and his continuous motivation served as the key driving force to bring it to completion.
 
 ## 🛠️ Installation & Dependencies
