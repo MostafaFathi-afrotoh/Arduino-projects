@@ -79,7 +79,7 @@ The system responds to incoming character strings structured as follows:
 * Note:
   Dr. Ragab Qasem is the main supervisor responsible for all scientific and 
      engineering aspects of the project.
- Prof. Dr. Salah Badr provided on-site facility 
+  Prof. Dr. Salah Badr provided on-site facility 
      support.
 
 ## 🛠️ Installation & Dependencies
